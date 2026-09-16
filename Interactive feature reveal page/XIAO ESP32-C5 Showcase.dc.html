@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#0b1020; font-family:'Barlow',system-ui,sans-serif; }
+  a { color:#2563eb; } a:hover { color:#1d4ed8; }
+  @keyframes floaty { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-8px) } }
+  @keyframes pulseRing { 0%{ transform:scale(.85); opacity:.5 } 70%{ transform:scale(1.25); opacity:0 } 100%{ opacity:0 } }
+</style>
+</helmet>
+
+<div style="{{ stageStyle }}">
+
+  <!-- connectors -->
+  <svg viewBox="0 0 1186 672" width="1186" height="672" style="position:absolute;inset:0;pointer-events:none;z-index:1">
+    <sc-for list="{{ connectors }}" as="c" hint-placeholder-count="6">
+      <path d="{{ c.d }}" fill="none" stroke="{{ c.color }}" stroke-width="3" stroke-linecap="round" style="{{ c.style }}"></path>
+      <circle cx="{{ c.cx }}" cy="{{ c.cy }}" r="5" fill="{{ c.color }}" style="{{ c.dotStyle }}"></circle>
+    </sc-for>
+  </svg>
+
+  <!-- header -->
+  <div style="position:absolute;left:34px;top:34px;display:flex;align-items:center;gap:10px;z-index:4">
+    <div style="background:#e11d2a;color:#fff;font-weight:900;font-size:26px;padding:4px 12px;border-radius:8px;letter-spacing:.5px">IOT</div>
+    <div style="color:#0b1533;font-weight:800;font-size:26px;letter-spacing:1px">BHAI</div>
+  </div>
+
+  <div style="position:absolute;left:230px;top:44px;width:660px;text-align:center;z-index:4">
+    <div style="font-weight:900;font-size:52px;line-height:1;letter-spacing:-1px">
+      <span style="color:#0b1533">Seeed Studio </span><span style="color:#1d5fd6">XIAO ESP32-C5</span>
+    </div>
+    <div style="color:#0b1533;font-weight:700;font-size:22px;margin-top:12px;letter-spacing:.5px">FIRST ESP32 WITH 5 GHz DUAL-BAND Wi-Fi 6</div>
+    <div style="height:4px;width:230px;background:#1d5fd6;border-radius:3px;margin:12px auto 0"></div>
+  </div>
+
+  <div style="position:absolute;right:34px;top:34px;background:#fdf0c8;border:2px solid #f2c85a;border-radius:16px;padding:10px 22px;text-align:center;z-index:4">
+    <div style="color:#0b1533;font-weight:900;font-size:40px;line-height:1">$6.90</div>
+    <div style="color:#5b5326;font-weight:600;font-size:15px">approx. price</div>
+  </div>
+
+  <!-- center board photo -->
+  <div style="position:absolute;left:440px;top:165px;width:306px;height:382px;z-index:2;display:flex;align-items:center;justify-content:center">
+    <img src="assets/board.png" alt="Seeed Studio XIAO ESP32-C5 board" style="position:relative;width:320px;height:auto;mix-blend-mode:multiply;animation:floaty 5s ease-in-out infinite">
+  </div>
+
+  <div style="position:absolute;left:455px;top:548px;width:276px;text-align:center;color:#1d5fd6;font-weight:700;font-size:20px;z-index:4">&#8592; 21 &#215; 17.8 mm &#8594;</div>
+
+  <!-- feature cards -->
+  <sc-for list="{{ cards }}" as="f" hint-placeholder-count="6">
+    <div style="{{ f.style }}">
+      <div style="{{ f.iconWrap }}">
+        <div style="{{ f.ringStyle }}"></div>
+        {{ f.iconEl }}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:24px;line-height:1.1;color:{{ f.color }}">{{ f.title }}</div>
+        <div style="font-weight:500;font-size:15px;color:#3a4a63;margin-top:4px">{{ f.sub }}</div>
+      </div>
+    </div>
+  </sc-for>
+
+  <!-- bottom bar -->
+  <div style="{{ bottomStyle }}">
+    <sc-for list="{{ bottomItems }}" as="b" hint-placeholder-count="4">
+      <div style="display:flex;align-items:center;gap:12px">
+        {{ b.iconEl }}
+        <div style="font-weight:700;font-size:16px;color:#1a2740;line-height:1.15">{{ b.label }}</div>
+      </div>
+      <sc-if value="{{ b.divider }}" hint-placeholder-val="{{ true }}"><div style="width:1px;height:34px;background:#d6def0"></div></sc-if>
+    </sc-for>
+  </div>
+
+  <!-- controls -->
+  <div style="position:absolute;right:26px;bottom:20px;display:flex;align-items:center;gap:14px;z-index:6">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#5a6b86">{{ progressLabel }}</div>
+    <button onClick="{{ next }}" style="{{ btnStyle }}">{{ btnLabel }}</button>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1186,&quot;height&quot;:672}}">
+class Component extends DCLogic {
+  state = { step: 0 };
+
+  next = () => this.setState(s => ({ step: s.step >= 7 ? 0 : s.step + 1 }));
+
+  card(visible, side, top, color, title, sub, icon) {
+    const left = side === 'L';
+    const iconEl = React.createElement('div', {
+      style:{ position:'relative', width:'62px', height:'62px', borderRadius:'50%', background:color+'1f', display:'flex', alignItems:'center', justifyContent:'center', color },
+      dangerouslySetInnerHTML:{ __html: icon }
+    });
+    return {
+      title, sub, color, icon, iconEl,
+      style: {
+        position:'absolute', top: top+'px', width:'388px',
+        [left?'left':'right']:'26px', zIndex:3,
+        display:'flex', alignItems:'center', gap:'16px',
+        background:'#ffffff', border:'2px solid '+color+'33',
+        borderRadius:'18px', padding:'16px 18px',
+        boxShadow:'0 10px 26px rgba(12,30,66,.10)',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateX(0) scale(1)' : 'translateX('+(left?-30:30)+'px) scale(.96)',
+        transition:'opacity .5s ease, transform .5s cubic-bezier(.2,.8,.2,1)',
+        pointerEvents: visible ? 'auto':'none'
+      },
+      iconWrap:{ position:'relative', width:'64px', height:'64px', flex:'0 0 auto', display:'flex', alignItems:'center', justifyContent:'center' },
+      ringStyle:{ position:'absolute', inset:'-2px', borderRadius:'50%', background:color, opacity:0, animation: visible?'pulseRing 1.6s ease-out .2s 1':'none' },
+    };
+  }
+
+  renderVals() {
+    const s = this.state.step;
+    const C = { wifi:'#12a5b8', bt:'#2563eb', zig:'#0ea5a5', risc:'#7c3aed', flash:'#7c3aed', batt:'#16a34a' };
+
+    const wifi = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8 15.5a5 5 0 0 1 8 0"/><circle cx="12" cy="19" r="1.3" fill="currentColor" stroke="none"/></svg>`;
+    const bt = `<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg>`;
+    const zig = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="4.5" r="2.4"/><circle cx="5" cy="17" r="2.4"/><circle cx="19" cy="17" r="2.4"/><path d="M12 6.9 6.2 14.9M12 6.9l5.8 8M7.2 17h9.6" stroke-linecap="round"/></svg>`;
+    const chip = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 6V3M15 6V3M9 21v-3M15 21v-3M6 9H3M6 15H3M21 9h-3M21 15h-3" stroke-linecap="round"/></svg>`;
+    const batt = `<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="7" width="16" height="10" rx="2.5"/><path d="M21 10.5v3" stroke-linecap="round"/><rect x="5.5" y="9.5" width="9" height="5" rx="1" fill="currentColor" stroke="none"/></svg>`;
+
+    const cards = [
+      this.card(s>=1,'L',180, C.wifi,'Dual-band Wi-Fi 6','2.4 GHz + 5 GHz \u00b7 802.11 a/b/g/n/ac/ax', wifi),
+      this.card(s>=2,'L',305, C.bt,'Bluetooth 5 LE','BLE 5 + Bluetooth Mesh', bt),
+      this.card(s>=3,'L',430, C.zig,'Zigbee \u00b7 Thread \u00b7 Matter','IEEE 802.15.4 \u00b7 HomeKit \u00b7 MQTT', zig),
+      this.card(s>=4,'R',180, C.risc,'RISC-V @ 240 MHz','32-bit single-core \u00b7 384 KB SRAM', chip),
+      this.card(s>=5,'R',305, C.flash,'8 MB Flash + 8 MB PSRAM','320 KB ROM \u00b7 16 KB RTC SRAM', chip),
+      this.card(s>=6,'R',430, C.batt,'Battery ready','LiPo charging \u00b7 15 \u00b5A deep sleep', batt),
+    ];
+
+    // connector paths: [d, cx, cy(board dot), color, cardVisibleStep]
+    const conDefs = [
+      ['M414 214 C 440 214, 435 250, 452 250', 452,250, C.wifi, 1],
+      ['M414 339 C 440 339, 438 340, 452 340', 452,340, C.bt, 2],
+      ['M414 464 C 440 464, 435 430, 452 430', 452,430, C.zig, 3],
+      ['M772 214 C 748 214, 750 250, 734 250', 734,250, C.risc, 4],
+      ['M772 339 C 748 339, 748 340, 734 340', 734,340, C.flash, 5],
+      ['M772 464 C 748 464, 750 430, 734 430', 734,430, C.batt, 6],
+    ];
+    const connectors = conDefs.map(([d,cx,cy,color,st]) => {
+      const on = s>=st;
+      return { d, cx, cy, color,
+        style:{ opacity:on?1:0, strokeDasharray:200, strokeDashoffset:on?0:200, transition:'stroke-dashoffset .5s ease .05s, opacity .3s ease' },
+        dotStyle:{ opacity:on?1:0, transition:'opacity .4s ease .35s' } };
+    });
+
+    const usbc = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="9" width="16" height="6" rx="3"/><path d="M8 12h8" stroke-linecap="round"/></svg>`;
+    const ant = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 15l3-6 3 6"/><path d="M7 17a7 7 0 0 1 10 0"/><path d="M5 19a10 10 0 0 1 14 0"/></svg>`;
+    const btnIcon = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="14" rx="2"/><rect x="7.5" y="9.5" width="4" height="4" rx="1"/><rect x="12.5" y="9.5" width="4" height="4" rx="1"/></svg>`;
+    const lock = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="9" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>`;
+
+    const bIcon = (html) => React.createElement('div', {
+      style:{ width:'44px', height:'44px', borderRadius:'12px', background:'#eef4ff', display:'flex', alignItems:'center', justifyContent:'center', color:'#1d5fd6', flex:'0 0 auto' },
+      dangerouslySetInnerHTML:{ __html: html }
+    });
+    const bottomItems = [
+      { iconEl:bIcon(usbc), label:'USB-C', divider:true },
+      { iconEl:bIcon(ant), label:'u.FL antenna', divider:true },
+      { iconEl:bIcon(btnIcon), label:'Reset + Boot buttons', divider:true },
+      { iconEl:bIcon(lock), label:'Secure Boot v2 + flash encryption', divider:false },
+    ];
+
+    const done = s>=7;
+    return {
+      cards, connectors, bottomItems,
+      stageStyle:{ position:'relative', width:'1186px', height:'672px', background:'#ffffff', overflow:'hidden', border:'6px solid #0b1220', borderRadius:'6px', fontFamily:"'Barlow',sans-serif" },
+      bottomStyle:{ position:'absolute', left:'26px', right:'26px', bottom:'20px', height:'74px', background:'#f6f9ff', border:'2px solid #e2e9f6', borderRadius:'18px', display:'flex', alignItems:'center', justifyContent:'space-around', padding:'0 18px', zIndex:3, opacity:done?1:0, transform:done?'translateY(0)':'translateY(20px)', transition:'opacity .5s ease, transform .5s ease' },
+      next: this.next,
+      btnLabel: done ? '\u21ba Replay' : '\u203a',
+      progressLabel: 'feature ' + Math.min(s,6) + ' / 6',
+      btnStyle:{ width: done?'auto':'56px', height:'56px', padding: done?'0 22px':'0', borderRadius:'28px', border:'none', cursor:'pointer', background:'#1d5fd6', color:'#fff', fontSize: done?'18px':'30px', fontWeight:800, lineHeight:'56px', boxShadow:'0 8px 20px rgba(29,95,214,.4)', display:'flex', alignItems:'center', justifyContent:'center' },
+    };
+  }
+}
+</script>
+</body>
+</html>

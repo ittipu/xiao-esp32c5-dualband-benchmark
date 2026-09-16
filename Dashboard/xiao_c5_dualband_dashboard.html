@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XIAO ESP32-C5 · 2.4 vs 5 GHz Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.3.5/mqtt.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg-0:#070b14; --bg-1:#0c1220; --bg-2:#0f1728;
+    --glass:rgba(255,255,255,.035); --glass-2:rgba(255,255,255,.06);
+    --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.05);
+    --ink:#eaf0fb; --muted:#8a97ad; --dim:#5c6880;
+
+    --b24:#f5a623; --b24-2:#ffcf6b; --b24-glow:rgba(245,166,35,.45);
+    --b5:#22d3ee;  --b5-2:#67e8f9;  --b5-glow:rgba(34,211,238,.45);
+    --ok:#34d399; --stale:#5c6880; --err:#f43f5e;
+    --mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 18% -8%, rgba(245,166,35,.10), transparent 60%),
+      radial-gradient(1100px 620px at 84% -6%, rgba(34,211,238,.12), transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    color:var(--ink);
+    font-family:"Space Grotesk",system-ui,-apple-system,sans-serif;
+    min-height:100vh; padding:clamp(14px,2.6vw,30px);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{width:min(1120px,100%);margin:0 auto;display:flex;flex-direction:column;gap:clamp(14px,2vw,20px)}
+
+  /* ---------------- header ---------------- */
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .iot{background:#e11d2a;color:#fff;font-weight:700;font-size:15px;
+    padding:3px 9px;border-radius:7px;letter-spacing:.5px}
+  .brand .bhai{font-weight:700;font-size:15px;letter-spacing:1px;color:var(--ink)}
+  .htitle{display:flex;flex-direction:column;line-height:1.15}
+  .htitle b{font-size:clamp(15px,2vw,19px);font-weight:700}
+  .htitle span{font-size:12px;color:var(--muted)}
+  .grow{flex:1 1 auto}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:var(--glass);
+    border:1px solid var(--hair);border-radius:999px;padding:7px 13px;font-size:12.5px;color:var(--muted)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--stale);flex:0 0 auto}
+  .dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(52,211,153,.16)}
+  .dot.err{background:var(--err);box-shadow:0 0 0 4px rgba(244,63,94,.16)}
+  .gear{background:var(--glass);border:1px solid var(--hair);color:var(--muted);
+    width:36px;height:36px;border-radius:10px;cursor:pointer;font-size:16px;display:grid;place-items:center}
+  .gear:hover{color:var(--ink);border-color:var(--hair)}
+
+  /* ---------------- settings ---------------- */
+  .settings{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;
+    background:var(--glass);border:1px solid var(--hair);border-radius:14px;padding:14px 16px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);font-weight:600}
+  .field input{background:rgba(0,0,0,.25);border:1px solid var(--hair);border-radius:9px;
+    color:var(--ink);padding:8px 11px;font-family:var(--mono);font-size:13px}
+  .field input:focus{outline:none;border-color:var(--b5);box-shadow:0 0 0 3px var(--b5-glow)}
+  #broker{width:min(280px,72vw)} #topic{width:min(200px,72vw)}
+  .btn{background:linear-gradient(180deg,#2b6cf6,#1d4ed8);color:#fff;border:0;border-radius:10px;
+    padding:10px 18px;font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;
+    box-shadow:0 6px 18px rgba(37,99,235,.35)}
+  .btn:active{transform:translateY(1px)}
+
+  /* ---------------- arena ---------------- */
+  .arena{display:grid;grid-template-columns:1fr auto 1fr;gap:clamp(12px,2vw,20px);align-items:stretch}
+  .panel{position:relative;background:linear-gradient(180deg,var(--glass-2),var(--glass));
+    border:1px solid var(--hair);border-radius:20px;padding:clamp(16px,2.4vw,26px);
+    display:flex;flex-direction:column;overflow:hidden;transition:border-color .3s, box-shadow .3s}
+  .panel::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.9}
+  .panel::after{content:"";position:absolute;width:280px;height:280px;border-radius:50%;
+    top:-150px;filter:blur(60px);opacity:.20;background:var(--accent);pointer-events:none}
+  .p24{--accent:var(--b24);--accent2:var(--b24-2);--glow:var(--b24-glow)}
+  .p24::after{right:-90px}
+  .p5{--accent:var(--b5);--accent2:var(--b5-2);--glow:var(--b5-glow)}
+  .p5::after{left:-90px}
+  .panel.winner{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent), 0 18px 50px -20px var(--glow)}
+
+  .phead{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
+  .pname{display:flex;align-items:center;gap:10px;font-weight:700;font-size:clamp(15px,2vw,18px)}
+  .pname .sw{width:12px;height:12px;border-radius:4px;background:var(--accent);box-shadow:0 0 12px var(--glow)}
+  .plive{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+  .crown{margin-left:2px;font-size:15px;opacity:0;transform:scale(.6);transition:.35s}
+  .panel.winner .crown{opacity:1;transform:scale(1)}
+
+  .hero{display:flex;align-items:baseline;gap:9px;margin:clamp(14px,2.2vw,22px) 0 4px;position:relative;z-index:1}
+  .num{font-family:var(--mono);font-weight:800;font-size:clamp(46px,9.5vw,92px);line-height:.9;
+    letter-spacing:-2px;font-variant-numeric:tabular-nums;
+    color:var(--accent2);text-shadow:0 0 30px var(--glow)}
+  .unit{font-family:var(--mono);font-size:clamp(14px,1.6vw,18px);color:var(--muted);font-weight:700}
+  .panel.stale .hero{opacity:.42}
+  .num.tick{animation:tick .4s ease}
+  @keyframes tick{from{transform:translateY(-4px);opacity:.5}to{transform:none;opacity:1}}
+
+  /* throughput race bar (scaled to the faster of the two) */
+  .tbar{height:10px;border-radius:6px;background:rgba(0,0,0,.3);overflow:hidden;position:relative;z-index:1}
+  .tbar i{display:block;height:100%;width:0;border-radius:6px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    box-shadow:0 0 14px var(--glow);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:clamp(16px,2.2vw,22px);position:relative;z-index:1}
+  .stat{background:rgba(0,0,0,.22);border:1px solid var(--hair-2);border-radius:12px;padding:11px 12px}
+  .stat .v{font-family:var(--mono);font-weight:700;font-size:clamp(15px,1.8vw,19px);font-variant-numeric:tabular-nums}
+  .stat .k{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+  .sig{display:flex;gap:3px;align-items:flex-end;height:16px;margin-top:7px}
+  .sig s{flex:1;background:var(--hair);border-radius:2px;transition:background .3s}
+  .sig s:nth-child(1){height:40%}.sig s:nth-child(2){height:55%}.sig s:nth-child(3){height:70%}
+  .sig s:nth-child(4){height:85%}.sig s:nth-child(5){height:100%}
+  .sig s.on{background:var(--accent);box-shadow:0 0 8px var(--glow)}
+
+  /* VS badge */
+  .vs{display:grid;place-items:center;min-width:56px}
+  .vs .badge{width:clamp(52px,7vw,74px);height:clamp(52px,7vw,74px);border-radius:50%;
+    display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:clamp(17px,2.4vw,24px);
+    background:radial-gradient(circle at 50% 35%,#1a2438,#0b1120);border:1px solid var(--hair);
+    color:var(--ink);box-shadow:0 10px 30px rgba(0,0,0,.5), inset 0 0 22px rgba(255,255,255,.04)}
+
+  /* winner banner */
+  .banner{display:none;align-items:center;justify-content:center;gap:12px;
+    border-radius:16px;padding:14px 18px;font-weight:700;font-size:clamp(14px,2vw,18px);
+    border:1px solid var(--hair);background:var(--glass)}
+  .banner.show{display:flex;animation:pop .5s ease}
+  .banner .tag{font-family:var(--mono);font-weight:800}
+  .banner.win24{border-color:var(--b24);background:linear-gradient(90deg,rgba(245,166,35,.14),rgba(245,166,35,.03));
+    box-shadow:0 0 40px -12px var(--b24-glow)}
+  .banner.win24 .tag{color:var(--b24-2)}
+  .banner.win5{border-color:var(--b5);background:linear-gradient(90deg,rgba(34,211,238,.14),rgba(34,211,238,.03));
+    box-shadow:0 0 40px -12px var(--b5-glow)}
+  .banner.win5 .tag{color:var(--b5-2)}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* chart */
+  .card{background:linear-gradient(180deg,var(--glass-2),var(--glass));
+    border:1px solid var(--hair);border-radius:20px;padding:clamp(16px,2.2vw,22px)}
+  .chead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .chead h2{margin:0;font-size:14.5px;font-weight:700}
+  .toggle{display:flex;gap:3px;background:rgba(0,0,0,.28);border:1px solid var(--hair);border-radius:11px;padding:3px}
+  .toggle button{background:transparent;color:var(--muted);border:0;border-radius:8px;
+    padding:7px 15px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+  .toggle button.active{background:var(--glass-2);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .chart-box{position:relative;height:clamp(220px,32vw,300px);width:100%}
+
+  footer{display:flex;flex-wrap:wrap;gap:8px 24px;color:var(--muted);font-size:12.5px;font-family:var(--mono);
+    padding:2px 4px}
+  footer b{color:var(--ink);font-weight:700}
+
+  /* responsive */
+  @media (max-width:760px){
+    .arena{grid-template-columns:1fr}
+    .vs{min-width:0;padding:2px 0}
+    .vs .badge{width:48px;height:48px;font-size:16px}
+    .num{font-size:clamp(54px,17vw,80px)}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand"><span class="iot">IOT</span><span class="bhai">BHAI</span></div>
+    <div class="htitle"><b>XIAO ESP32-C5</b><span>2.4 GHz vs 5 GHz · live benchmark</span></div>
+    <div class="grow"></div>
+    <div class="pill"><span class="dot" id="statusDot"></span><span id="statusText">Connecting…</span></div>
+    <button class="gear" id="gearBtn" title="Connection settings">⚙</button>
+  </header>
+
+  <div class="settings" id="settings" hidden>
+    <div class="field"><label for="broker">Broker (WebSocket)</label>
+      <input id="broker" value="ws://mqtt.iotbhai.io" spellcheck="false"></div>
+    <div class="field"><label for="topic">Topic</label>
+      <input id="topic" value="iotbhai/c5/bench" spellcheck="false"></div>
+    <button class="btn" id="connectBtn">Connect</button>
+  </div>
+
+  <section class="arena">
+    <!-- 2.4 GHz -->
+    <div class="panel p24 stale" id="lane24">
+      <div class="phead">
+        <div class="pname"><span class="sw"></span>2.4 GHz<span class="crown">👑</span></div>
+        <div class="plive"><span class="dot" id="dot24"></span><span id="state24">waiting</span></div>
+      </div>
+      <div class="hero"><span class="num" id="mbps24">--</span><span class="unit">Mbps</span></div>
+      <div class="tbar"><i id="bar24"></i></div>
+      <div class="stats">
+        <div class="stat">
+          <div class="v" id="rssi24">--</div><div class="k">Signal dBm</div>
+          <div class="sig" id="sig24"><s></s><s></s><s></s><s></s><s></s></div>
+        </div>
+        <div class="stat"><div class="v" id="ch24">--</div><div class="k">Channel</div></div>
+        <div class="stat"><div class="v" id="conn24">--</div><div class="k">Connect ms</div></div>
+      </div>
+    </div>
+
+    <div class="vs"><div class="badge">VS</div></div>
+
+    <!-- 5 GHz -->
+    <div class="panel p5 stale" id="lane5">
+      <div class="phead">
+        <div class="pname"><span class="sw"></span>5 GHz<span class="crown">👑</span></div>
+        <div class="plive"><span class="dot" id="dot5"></span><span id="state5">waiting</span></div>
+      </div>
+      <div class="hero"><span class="num" id="mbps5">--</span><span class="unit">Mbps</span></div>
+      <div class="tbar"><i id="bar5"></i></div>
+      <div class="stats">
+        <div class="stat">
+          <div class="v" id="rssi5">--</div><div class="k">Signal dBm</div>
+          <div class="sig" id="sig5"><s></s><s></s><s></s><s></s><s></s></div>
+        </div>
+        <div class="stat"><div class="v" id="ch5">--</div><div class="k">Channel</div></div>
+        <div class="stat"><div class="v" id="conn5">--</div><div class="k">Connect ms</div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="banner" id="banner"><span id="bannerText"></span></div>
+
+  <section class="card">
+    <div class="chead">
+      <h2>Live comparison</h2>
+      <div class="toggle">
+        <button id="tMbps" class="active">Throughput</button>
+        <button id="tRssi">Signal</button>
+      </div>
+    </div>
+    <div class="chart-box"><canvas id="chart"></canvas></div>
+  </section>
+
+  <footer>
+    <span>last packet <b id="lastPkt">—</b></span>
+    <span>device IP <b id="ipVal">—</b></span>
+    <span>packets <b id="pktCount">0</b></span>
+  </footer>
+
+</div>
+
+<script>
+const MAX_POINTS = 44, STALE_MS = 20000;
+let client = null, metric = "mbps", pkt = 0;
+const $ = id => document.getElementById(id);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+const lanes = {
+  "2.4GHz":{key:"2.4GHz",mbps:$("mbps24"),rssi:$("rssi24"),ch:$("ch24"),conn:$("conn24"),
+            bar:$("bar24"),sig:$("sig24"),lane:$("lane24"),dot:$("dot24"),state:$("state24"),last:0},
+  "5GHz":  {key:"5GHz",  mbps:$("mbps5"), rssi:$("rssi5"), ch:$("ch5"), conn:$("conn5"),
+            bar:$("bar5"), sig:$("sig5"), lane:$("lane5"), dot:$("dot5"), state:$("state5"), last:0},
+};
+const latest = {};                       // last sample per band key
+
+/* ---------- MQTT payload -> band key (handles 2.4G/5G, 2.4GHz/5GHz, or channel) ---------- */
+function bandKey(s){
+  const b = (s.band||"").toString().toLowerCase().replace(/\s+/g,"");
+  if(b.includes("2.4")) return "2.4GHz";
+  if(b.includes("5"))   return "5GHz";
+  const ch = Number(s.channel);
+  if(ch>0) return ch<=14 ? "2.4GHz" : "5GHz";
+  return null;
+}
+
+/* ---------- signal meter: -30 dBm great .. -90 dBm poor ---------- */
+function signalBars(rssi){
+  const pct = Math.max(0, Math.min(100, (rssi + 90) / 60 * 100));
+  return Math.round(pct/20);             // 0..5
+}
+function renderSignal(L, rssi){
+  const n = signalBars(rssi);
+  [...L.sig.children].forEach((s,i)=>s.classList.toggle("on", i<n));
+}
+
+/* ---------- throughput race bars (scaled to the faster band) ---------- */
+function updateBars(){
+  const a = latest["2.4GHz"], b = latest["5GHz"];
+  const max = Math.max(a?.mbps||0, b?.mbps||0, 0.1);
+  if(a) lanes["2.4GHz"].bar.style.width = Math.min(100,(a.mbps/max)*100)+"%";
+  if(b) lanes["5GHz"].bar.style.width   = Math.min(100,(b.mbps/max)*100)+"%";
+}
+
+/* ---------- winner banner ---------- */
+function updateWinner(){
+  const a = latest["2.4GHz"], b = latest["5GHz"], banner = $("banner");
+  lanes["2.4GHz"].lane.classList.remove("winner");
+  lanes["5GHz"].lane.classList.remove("winner");
+  if(!a || !b){ banner.className = "banner"; return; }
+  const fast = a.mbps >= b.mbps ? a : b, slow = a.mbps >= b.mbps ? b : a;
+  const winKey = fast===a ? "2.4GHz" : "5GHz";
+  const label  = winKey==="2.4GHz" ? "2.4 GHz" : "5 GHz";
+  const delta  = slow.mbps>0 ? ((fast.mbps-slow.mbps)/slow.mbps*100) : 100;
+  lanes[winKey].lane.classList.add("winner");
+  banner.className = "banner show " + (winKey==="2.4GHz"?"win24":"win5");
+  $("bannerText").innerHTML = Math.abs(delta) < 3
+    ? `⚡ <span class="tag">Dead heat</span> — both ≈ ${fast.mbps.toFixed(1)} Mbps`
+    : `⚡ <span class="tag">${label}</span> is faster by <span class="tag">${delta.toFixed(0)}%</span> · ${fast.mbps.toFixed(1)} vs ${slow.mbps.toFixed(1)} Mbps`;
+}
+
+/* ---------- chart ---------- */
+const chart = new Chart($("chart"), {
+  type:"line",
+  data:{ datasets:[
+    {label:"2.4 GHz",data:[],borderColor:css("--b24"),backgroundColor:"rgba(245,166,35,.10)",
+     fill:true,tension:.35,pointRadius:0,borderWidth:2.5,spanGaps:true},
+    {label:"5 GHz",data:[],borderColor:css("--b5"),backgroundColor:"rgba(34,211,238,.10)",
+     fill:true,tension:.35,pointRadius:0,borderWidth:2.5,spanGaps:true},
+  ]},
+  options:{
+    responsive:true, maintainAspectRatio:false, animation:false,
+    interaction:{intersect:false,mode:"index"},
+    scales:{
+      x:{type:"linear",ticks:{display:false},grid:{color:css("--hair-2")},border:{color:css("--hair")}},
+      y:{beginAtZero:true,grid:{color:css("--hair-2")},border:{color:css("--hair")},
+         ticks:{color:css("--muted")},title:{display:true,text:"Mbps",color:css("--muted")}}
+    },
+    plugins:{legend:{labels:{color:css("--ink"),usePointStyle:true,boxWidth:8,padding:16}},
+             tooltip:{backgroundColor:"#0b1120",borderColor:css("--hair"),borderWidth:1}}
+  }
+});
+function pushPoint(key,s){
+  const ds = chart.data.datasets[key==="2.4GHz"?0:1];
+  ds.data.push({x:Date.now(), y: metric==="mbps"?s.mbps:s.rssi});
+  if(ds.data.length>MAX_POINTS) ds.data.shift();
+  chart.update("none");
+}
+function rebuildAxis(){
+  chart.options.scales.y.title.text = metric==="mbps"?"Mbps":"RSSI (dBm)";
+  chart.options.scales.y.beginAtZero = metric==="mbps";
+  chart.data.datasets.forEach(d=>d.data=[]); chart.update("none");
+}
+
+/* ---------- incoming sample ---------- */
+function onSample(raw){
+  let s; try{ s=JSON.parse(raw); }catch{ return; }
+  const key = bandKey(s); if(!key) return;
+  const L = lanes[key];
+  const ok = s.ok !== false;
+  const mbps = Number(s.mbps ?? 0), rssi = Number(s.rssi ?? 0);
+
+  latest[key] = {mbps, rssi};
+  L.mbps.textContent = ok ? mbps.toFixed(1) : "FAIL";
+  L.rssi.textContent = ok ? rssi : "--";
+  L.ch.textContent   = s.channel ?? "--";
+  L.conn.textContent = s.connect_ms ?? "--";
+  if(ok) renderSignal(L, rssi); else [...L.sig.children].forEach(x=>x.classList.remove("on"));
+
+  L.mbps.classList.remove("tick"); void L.mbps.offsetWidth; L.mbps.classList.add("tick");
+  L.lane.classList.remove("stale"); L.dot.classList.add("on");
+  L.state.textContent = "live"; L.last = Date.now();
+
+  pushPoint(key,{mbps,rssi});
+  updateBars(); updateWinner();
+  pkt++; $("pktCount").textContent = pkt;
+  $("lastPkt").textContent = new Date().toLocaleTimeString();
+  if(s.ip) $("ipVal").textContent = s.ip;
+}
+
+/* ---------- stale watchdog ---------- */
+setInterval(()=>{
+  const now = Date.now();
+  for(const k in lanes){ const L = lanes[k];
+    if(L.last && now-L.last>STALE_MS){
+      L.lane.classList.add("stale"); L.dot.classList.remove("on"); L.state.textContent="stale"; }}
+},2000);
+
+/* ---------- connection ---------- */
+function setStatus(t,c){ $("statusText").textContent=t; $("statusDot").className="dot"+(c?" "+c:""); }
+function connect(){
+  const url = $("broker").value.trim(), topic = $("topic").value.trim();
+  if(client) client.end(true);
+  setStatus("Connecting…");
+  try{
+    client = mqtt.connect(url,{connectTimeout:6000,reconnectPeriod:3000,
+             clientId:"c5-dash-"+Math.random().toString(16).slice(2,8)});
+  }catch(e){ setStatus("Bad broker URL","err"); return; }
+  client.on("connect",   ()=>{ setStatus("Live · "+topic,"on"); client.subscribe(topic); });
+  client.on("reconnect", ()=> setStatus("Reconnecting…"));
+  client.on("error",     ()=> setStatus("Error — check broker / WebSocket port","err"));
+  client.on("close",     ()=> setStatus("Disconnected","err"));
+  client.on("message",   (t,p)=> onSample(p.toString()));
+  $("connectBtn").textContent = "Reconnect";
+}
+
+/* ---------- UI wiring ---------- */
+$("gearBtn").addEventListener("click", ()=> $("settings").hidden = !$("settings").hidden);
+$("connectBtn").addEventListener("click", connect);
+$("tMbps").addEventListener("click", ()=>{ metric="mbps";
+  $("tMbps").classList.add("active"); $("tRssi").classList.remove("active"); rebuildAxis(); });
+$("tRssi").addEventListener("click", ()=>{ metric="rssi";
+  $("tRssi").classList.add("active"); $("tMbps").classList.remove("active"); rebuildAxis(); });
+
+connect();   // auto-connect to ws://mqtt.iotbhai.io on load
+</script>
+</body>
+</html>
