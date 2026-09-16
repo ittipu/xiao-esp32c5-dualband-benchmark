@@ -160,6 +160,14 @@ This firmware handles it: it **auto-selects the SSID that matches the band** it'
 
 ## 📟 OLED screens
 
+<div align="center">
+<img src="images/oled-comparison.jpg" alt="XIAO ESP32-C5 OLED showing the 2.4 vs 5 GHz comparison" width="440">
+<br>
+<em>The real comparison screen — 5 GHz wins on both throughput and signal here.</em>
+</div>
+
+The firmware cycles through three screens per run:
+
 ```
  Testing 5G          5G   47%          2.4G     5G
  downloading...      15.8 Mbps    Mbps  22.4   15.8
