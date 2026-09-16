@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Interactive%20feature%20reveal%20page/assets/board.png" alt="Seeed Studio XIAO ESP32-C5" width="220">
+<img src="images/board.png" alt="Seeed Studio XIAO ESP32-C5" width="220">
 
 # XIAO ESP32-C5 · 2.4 GHz vs 5 GHz Live Benchmark
 
@@ -41,8 +41,7 @@ It was built for the IoT Bhai YouTube video **“2.4 GHz vs 5 GHz on the ESP32-C
 │   └── serve_testfile.py           #   creates a 30 MB file and serves it
 ├── Dashboard/                      # Live MQTT web dashboard (open in a browser)
 │   └── xiao_c5_dualband_dashboard.html
-├── Interactive feature reveal page/# Animated feature-reveal showcase page
-│   └── index.html
+├── images/                         # README assets
 └── README.md
 ```
 

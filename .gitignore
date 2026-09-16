@@ -25,6 +25,5 @@ build/
 Thumbs.db
 .thumbnail
 
-# ---- Design-canvas working scraps (not needed in the repo) ----
-Interactive feature reveal page/scraps/
-Interactive feature reveal page/uploads/
+# ---- Private: interactive feature-reveal showcase page (kept local only) ----
+Interactive feature reveal page/
